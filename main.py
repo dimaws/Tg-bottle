@@ -17,10 +17,14 @@ from pydub import AudioSegment
 # --- Конфигурация ---
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ALLOWED_USER_IDS = os.getenv("ALLOWED_USER_IDS", "")  # CSV: "123,456"
+ALLOWED_USER_IDS = os.getenv("ALLOWED_USER_IDS", "")
+PORT = int(os.getenv("PORT", "8080"))
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # пример: https://yourapp.up.railway.app
 
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY:
     raise RuntimeError("Не заданы TELEGRAM_BOT_TOKEN или OPENAI_API_KEY")
+if not WEBHOOK_URL:
+    raise RuntimeError("Не задан WEBHOOK_URL (например, https://yourapp.up.railway.app)")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -38,7 +42,7 @@ logger = logging.getLogger(__name__)
 # --- Проверка доступа ---
 def user_allowed(update: Update) -> bool:
     if not ALLOWED:
-        return True  # если список пуст — впускаем всех
+        return True
     uid = update.effective_user.id if update.effective_user else None
     return uid in ALLOWED
 
@@ -84,13 +88,12 @@ async def image_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("/image failed")
         await update.message.reply_text(f"Не удалось сгенерировать изображение: {e}")
 
-# --- Текстовые сообщения ---
+# --- Текст ---
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await deny_if_needed(update, context):
         return
     user_text = update.message.text
     await send_typing(update, context)
-
     try:
         chat_resp = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -106,11 +109,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("text handler failed")
         await update.message.reply_text(f"Ошибка ответа: {e}")
 
-# --- Голосовые сообщения ---
+# --- Голос ---
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await deny_if_needed(update, context):
         return
-
     voice = update.message.voice or update.message.audio
     if not voice:
         await update.message.reply_text("Не нашёл голосовой файл.")
@@ -122,7 +124,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ogg_buf.seek(0)
 
     await send_typing(update, context)
-
     try:
         tr = client.audio.transcriptions.create(
             model="whisper-1",
@@ -168,18 +169,26 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.exception("TTS or send failed")
         await update.message.reply_text(answer_text)
 
-# --- Запуск приложения ---
-def application():
-    return ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-
+# --- Ошибки ---
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.exception("Exception while handling update: %s", context.error)
 
-if __name__ == "__main__":
-    app = application()
+# --- Запуск ---
+def main():
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_error_handler(on_error)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("image", image_cmd))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & ~filters.COMMAND, handle_voice))
-    app.run_polling(close_loop=False)
+
+    webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TELEGRAM_BOT_TOKEN,
+        webhook_url=f"{WEBHOOK_URL}{webhook_path}",
+    )
+
+if __name__ == "__main__":
+    main()
