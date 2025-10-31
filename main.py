@@ -15,8 +15,8 @@ from telegram.ext import (
 from pydub import AudioSegment
 
 # --- Конфигурация ---
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_KEY = os.getenv("OPENAI_KEY")
 ALLOWED_USER_IDS = os.getenv("ALLOWED_USER_IDS", "")
 PORT = int(os.getenv("PORT", "8080"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # пример: https://yourapp.up.railway.app
