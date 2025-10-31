@@ -2,7 +2,12 @@ import os
 import io
 import logging
 from typing import List
+
+import openai, inspect
+print("OPENAI_VERSION:", getattr(openai, "__version__", "unknown"))
 from openai import OpenAI
+print("OPENAI_CLIENT_SIG:", inspect.signature(OpenAI.__init__))
+
 from telegram import Update
 from telegram.constants import ChatAction
 from telegram.ext import (
