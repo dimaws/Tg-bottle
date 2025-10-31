@@ -15,18 +15,18 @@ from telegram.ext import (
 from pydub import AudioSegment
 
 # --- Конфигурация ---
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 ALLOWED_USER_IDS = os.getenv("ALLOWED_USER_IDS", "")
 PORT = int(os.getenv("PORT", "8080"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # пример: https://yourapp.up.railway.app
 
-if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY:
-    raise RuntimeError("Не заданы TELEGRAM_BOT_TOKEN или OPENAI_API_KEY")
+if not BOT_TOKEN or not OPENAI_KEY:
+    raise RuntimeError("Не заданы BOT_TOKEN или OPENAI_KEY")
 if not WEBHOOK_URL:
     raise RuntimeError("Не задан WEBHOOK_URL (например, https://yourapp.up.railway.app)")
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(api_key=OPENAI_KEY)
 
 # --- Разрешённые пользователи ---
 ALLOWED: List[int] = []
@@ -182,11 +182,11 @@ def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(MessageHandler((filters.VOICE | filters.AUDIO) & ~filters.COMMAND, handle_voice))
 
-    webhook_path = f"/{TELEGRAM_BOT_TOKEN}"
+    webhook_path = f"/{BOT_TOKEN}"
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        url_path=TELEGRAM_BOT_TOKEN,
+        url_path=BOT_TOKEN,
         webhook_url=f"{WEBHOOK_URL}{webhook_path}",
     )
 
