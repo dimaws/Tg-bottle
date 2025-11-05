@@ -9,6 +9,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
+from openai import AsyncOpenAI
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
